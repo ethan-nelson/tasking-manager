@@ -96,20 +96,31 @@ class StatsService:
     @staticmethod
     def get_project_stats(project_id: int, preferred_locale: str) -> ProjectSummary:
         """ Gets stats for the specified project """
-        project = db.session.query(Project.id,
-                                   Project.status,
-                                   Project.campaign_tag,
-                                   Project.total_tasks,
-                                   Project.tasks_mapped,
-                                   Project.tasks_validated,
-                                   Project.tasks_bad_imagery,
-                                   Project.created,
-                                   Project.last_updated,
-                                   Project.default_locale,
-                                   AreaOfInterest.centroid.ST_AsGeoJSON().label('geojson'))\
-            .join(AreaOfInterest).filter(Project.id == project_id).one_or_none()
+        contrib_query = '''SELECT p.id, p.status, p.campaign_tag, p.total_tasks, p.tasks_mapped,
+                             p.tasks_validated, p.tasks_bad_imagery, p.created, p.last_updated,
+                             p.default_locale, COUNT(DISTINCT t.mapped_by)
+                                FROM projects p INNER JOIN
+                                     tasks t
+                                  ON t.project_id = {0}
+                            GROUP BY p.id
+        '''.format(project_id)
+        results = db.engine.execute(contrib_query)
 
-        pm_project = Project.get_project_summary(project, preferred_locale)
+        if results.rowcount == 0:
+            raise NotFound()
+
+        pm_project = ProjectSummary()
+        for row in results:
+            pm_project.project_id = row[0]
+            pm_project.name = ''
+            pm_project.campaign_tag = row[2]
+            pm_project.percent_mapped = row[4]
+            pm_project.percent_validated = row[5]
+            pm_project.created = row[7]
+            pm_project.last_updated = row[8]
+            pm_project.aoi_centroid = ''
+            pm_project.mapper_count = row[10]
+
         return pm_project
 
     @staticmethod

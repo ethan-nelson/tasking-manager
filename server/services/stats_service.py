@@ -1,7 +1,7 @@
 from server import db
 from server.models.dtos.project_dto import ProjectSummary
 from server.models.dtos.stats_dto import ProjectContributionsDTO, UserContribution, Pagination, TaskHistoryDTO, \
-    ProjectActivityDTO
+    ProjectActivityDTO, AllUserDTO, UserDTO, UserActivityDTO, UserActionActivityDTO
 from server.models.postgis.project import Project
 from server.models.postgis.statuses import TaskStatus
 from server.models.postgis.task import TaskHistory, User
@@ -163,3 +163,42 @@ class StatsService:
             contrib_dto.user_contributions.append(user_contrib)
 
         return contrib_dto
+
+
+    @staticmethod
+    def get_all_user_stats() -> AllUserDTO:
+        """ Get user done, validating, and invalidating information"""
+        contrib_query = '''SELECT t.user_id, t.project_id, t.action_text, t.action_date
+                             FROM task_history t
+                            WHERE t.action_text in ('MAPPED', 'VALIDATED', 'INVALIDATED')
+        '''
+
+        results = db.engine.execute(contrib_query)
+        if results.rowcount == 0:
+            raise NotFound()
+
+        results_dict = {}
+        for row in results:
+            if row[0] not in results_dict:
+                results_dict[row[0]] = {row[1]: {'MAPPED': [], 'VALIDATED': [], 'INVALIDATED': []}}
+            else:
+                if row[1] not in results_dict[row[0]]:
+                    results_dict[row[0]][row[1]] = {'MAPPED': [], 'VALIDATED': [], 'INVALIDATED': []}
+            results_dict[row[0]][row[1]][row[2]].append(row[3])
+
+        all_users_dto = AllUserDTO()
+        for user in results_dict:
+            user_activity = UserDTO()
+            user_activity.user_id = user
+            for project in results_dict[user]:
+                project_activity = UserActivityDTO()
+                project_activity.project_id = project
+                for action in results_dict[user][project]:
+                    action_activity = UserActionActivityDTO()
+                    action_activity.action_type = action
+                    action_activity.datetimes = results_dict[user][project][action]
+                    project_activity.action.append(action_activity)
+                user_activity.activity.append(project_activity)
+            all_users_dto.all_activity.append(user_activity)
+
+        return all_users_dto

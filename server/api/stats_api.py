@@ -1,6 +1,7 @@
 from flask_restful import Resource, current_app, request
 from server.services.stats_service import StatsService, NotFound
 from server.services.project_service import ProjectService
+from server.services.users.authentication_service import token_auth, tm
 
 
 class StatsContributionsAPI(Resource):
@@ -116,5 +117,44 @@ class StatsProjectAPI(Resource):
             return {"Error": "Project not found"}, 404
         except Exception as e:
             error_msg = f'Project Summary GET - unhandled error: {str(e)}'
+            current_app.logger.critical(error_msg)
+            return {"error": error_msg}, 500
+
+
+class StatsAllAPI(Resource):
+    @tm.pm_only()
+    @token_auth.login_required
+    def get(self):
+        """
+        Get All User Activity
+        ---
+        tags:
+          - stats
+        produces:
+          - application/json
+        parameters:
+            - in: header
+              name: Authorization
+              description: Base64 encoded session token
+              required: true
+              type: string
+              default: Token sessionTokenHere==
+        responses:
+            200:
+                description: All user stats
+            401:
+                description: Unauthorized - Invalid Credentials
+            404:
+                description: No activity yet
+            500:
+                description: Internal Server Error
+        """
+        try:
+            all_user_stats = StatsService.get_all_user_stats()
+            return all_user_stats.to_primitive(), 200
+        except NotFound:
+            return {"Error": "No activity yet"}, 404
+        except Exception as e:
+            error_msg = f'unhandled error: {str(e)}'
             current_app.logger.critical(error_msg)
             return {"error": error_msg}, 500

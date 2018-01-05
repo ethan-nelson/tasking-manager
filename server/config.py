@@ -72,7 +72,7 @@ class StagingConfig(EnvironmentConfig):
 
 
 class DevConfig(EnvironmentConfig):
-    APP_BASE_URL = 'http://127.0.0.1:5000'
+    APP_BASE_URL = f'http://{os.getenv("TM_HOST", "127.0.0.1")}:{os.getenv("TM_PORT", "5000")}'
     API_DOCS_URL = f'{APP_BASE_URL}/api-docs/swagger-ui/index.html?url=http://127.0.0.1:5000/api/docs'
     LOG_DIR = 'logs'
     LOG_LEVEL = logging.DEBUG

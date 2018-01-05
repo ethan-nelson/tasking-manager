@@ -1,7 +1,7 @@
 import base64
 
 from flask_migrate import MigrateCommand
-from flask_script import Manager
+from flask_script import Manager, Server
 
 from server import create_app
 from server.services.users.authentication_service import AuthenticationService
@@ -21,6 +21,10 @@ manager = Manager(application)
 
 # Enable db migrations to be run via the command line
 manager.add_command('db', MigrateCommand)
+
+# Explicitly set server to customize host and/or port as necessary
+server = Server(host=os.getenv('TM_HOST', '127.0.0.1'), port=os.getenv('TM_PORT', '5000'))
+manager.add_command('runserver', server)
 
 
 @manager.option('-u', '--user_id', help='Test User ID')

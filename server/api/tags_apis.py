@@ -1,5 +1,6 @@
-from flask_restful import Resource, current_app
+from flask_restful import Resource, current_app, request
 from server.services.tags_service import TagsService
+from distutils.util import strtobool
 
 
 class OrganisationTagsAPI(Resource):
@@ -12,6 +13,12 @@ class OrganisationTagsAPI(Resource):
           - tags
         produces:
           - application/json
+        parameters:
+          - name: include_empty
+            in: query
+            type: boolean
+            required: false
+            description: Set to true if you want tags with no projects
         responses:
             200:
                 description: Organisation tags
@@ -19,7 +26,12 @@ class OrganisationTagsAPI(Resource):
                 description: Internal Server Error
         """
         try:
-            tags = TagsService.get_all_organisation_tags()
+            include_empty = strtobool(request.args.get('include_empty')) \
+                                if request.args.get('include_empty') else False
+            if include_empty is True:
+                tags = TagsService.get_all_organisation_tags()
+            else:
+                tags = TagsService.get_used_organisation_tags()
             return tags.to_primitive(), 200
         except Exception as e:
             error_msg = f'User GET - unhandled error: {str(e)}'
@@ -37,6 +49,12 @@ class CampaignsTagsAPI(Resource):
           - tags
         produces:
           - application/json
+        parameters:
+          - name: include_empty
+            in: query
+            type: boolean
+            required: false
+            description: Set to true if you want tags with no projects
         responses:
             200:
                 description: Campaign tags
@@ -44,7 +62,12 @@ class CampaignsTagsAPI(Resource):
                 description: Internal Server Error
         """
         try:
-            tags = TagsService.get_all_campaign_tags()
+            include_empty = strtobool(request.args.get('include_empty')) \
+                                if request.args.get('include_empty') else False
+            if include_empty is True:
+                tags = TagsService.get_all_campaign_tags()
+            else:
+                tags = TagsService.get_used_campaign_tags()
             return tags.to_primitive(), 200
         except Exception as e:
             error_msg = f'User GET - unhandled error: {str(e)}'

@@ -46,9 +46,31 @@ class Tags(db.Model):
         return dto
 
     @staticmethod
+    def get_used_organisations():
+        """ Get org tags in DB that are assigned to a project """
+        result = db.session.query(Tags.organisations, Project.organisation_tag) \
+                     .filter(Tags.organisations.isnot(None)).filter(Tags.organisations._in(Project.organisation_tag))
+
+
+        dto = TagsDTO()
+        dto.tags = [r for r, in result]
+        return dto
+
+    @staticmethod
     def get_all_campaigns():
         """ Get all campaign tags in DB """
         result = db.session.query(Tags.campaigns).filter(Tags.campaigns.isnot(None))
+
+        dto = TagsDTO()
+        dto.tags = [r for r, in result]
+        return dto
+
+    @staticmethod
+    def get_used_campaigns():
+        """ Get campaign tags in DB that are assigned to a project """
+        result = db.session.query(Tags.campaigns, Project.campaign_tag) \
+                     .filter(Tags.campaigns.isnot(None)).filter(Tags.campaigns._in(Project.campaign_tag))
+
 
         dto = TagsDTO()
         dto.tags = [r for r, in result]
